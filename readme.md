@@ -10,6 +10,6 @@
 + [ ] Executable examples if appropriate
 + [ ] A listing on pkg.go.dev
 + [ ] No commented-out code
-+ [ ]No unchecked errors
++ [ ] No unchecked errors
 + [ ] No 'staticcheck' warnings
-+ [ ]A Go-compatible release tag (for example v0.1.0)
++ [ ] A Go-compatible release tag (for example v0.1.0)
