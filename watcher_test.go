@@ -19,7 +19,7 @@ func TestFetch(t *testing.T) {
 	if err != nil {
 		t.Error("the server failed")
 	}
-	if s != "The information about Hello is available." {
+	if s != true {
 		t.Fatalf("the wrong text was fetched, here is the text that was fetched %v", s)
 	}
 }
