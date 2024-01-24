@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/joumanae/watcher"
 )
 
@@ -12,9 +10,20 @@ func main() {
 	// Access the file
 	// Range over urls and keywords of the file
 	// type check struct {url string, keyword string}
-
-	checks := watcher.MagicFunction()
-	for key, check := range checks {
-		fmt.Println(watcher.Fetch(key, check))
+	var c watcher.Check
+	filepath, err := c.StartList()
+	if err != nil {
+		return
 	}
+
+	MapedFile, err2 := c.ReadFileToMap(filepath)
+	if err2 != nil {
+		return
+	}
+
+	for url, keyword := range MapedFile {
+		watcher.Fetch(url, keyword)
+	}
+
+	//TODO: once the list is started, how do I run the rest of the methods, what do I call for filepath
 }
