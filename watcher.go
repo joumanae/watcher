@@ -14,7 +14,6 @@ type Check struct {
 	keyword string
 }
 
-// TODO: ask John why is this even a thing?
 func NewCheck(url string, keyword string) *Check {
 	return &Check{
 		url:     url,
@@ -42,34 +41,28 @@ func (c *Check) StartList() (string, error) {
 }
 
 // Read the file and create a map with urls and keywords.
-func (c *Check) ReadFileToMap(filePath string) (map[string]string, error) {
+func (c *Check) ReadFileSaveInput(filePath string) (map[string]string, error) {
+	inputData := make(map[string]string)
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
-	checks := map[string]string{
-		c.url:     c.url,
-		c.keyword: c.keyword,
-	}
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := scanner.Text()
-
-		parts := strings.SplitAfterN(line, "keyword", 2)
-		if len(parts) == 2 {
-			url := strings.TrimSpace(parts[0])
-			keyword := strings.TrimSpace(parts[1])
-			checks[url] = keyword
-		}
+		input := scanner.Text()
+		parts := strings.SplitN(input, " ", 2)
+		c.url = parts[0]
+		c.keyword = parts[1]
+		inputData[c.url] = c.keyword
 	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return checks, nil
+	return inputData, nil
 }
 
 // Fetch the url and verify if the keyword is on the page fetched.
+// https://innercitytennis.clubautomation.com/calendar/programs, 6U Red Rockets, https://www.americankaratestudio.com/stlouispark KIDS GREEN-PURPLE
+// When I fetch this, it does not look at images
 func Fetch(url string, keyword string) (matched bool, err error) {
 
 	resp, err := http.Get(string(url))
@@ -82,4 +75,26 @@ func Fetch(url string, keyword string) (matched bool, err error) {
 	}
 	sr := string(b)
 	return strings.Contains(sr, keyword), nil
+}
+
+// Run the program
+func Main() int {
+
+	var c Check
+	NewCheck(c.keyword, c.url)
+	filepath, err := c.StartList()
+	if err != nil {
+		return 1
+	}
+
+	MapedFile, err2 := c.ReadFileSaveInput(filepath)
+	if err2 != nil {
+		return 1
+	}
+	fmt.Println("Here is the map", MapedFile)
+
+	for c.url, c.keyword = range MapedFile {
+		fmt.Println(Fetch(c.url, c.keyword))
+	}
+	return 0
 }
