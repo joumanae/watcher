@@ -20,6 +20,7 @@ type Checker struct {
 	Output  io.Writer
 }
 
+// NewChecker starts the program.
 func NewChecker(url string, keyword string) *Checker {
 	return &Checker{
 		url:     url,
@@ -28,37 +29,35 @@ func NewChecker(url string, keyword string) *Checker {
 	}
 }
 
-// Fetch the url and verify if the keyword is on the page fetched.
-// https://innercitytennis.clubautomation.com/calendar/programs 6U Red Rockets https://www.americankaratestudio.com/stlouispark KIDS GREEN-PURPLE
-func Fetch(url string, keyword string) (matched bool, err error) {
+// ReadFlieSaveInput reads the file and creates a map with urls and keywords.
+func (c *Checker) ReadFileSaveInput(filePath string) (map[string]string, error) {
+	inputData := make(map[string]string)
 
-	resp, err := http.Get(string(url))
+	file, err := os.Open(filePath)
 	if err != nil {
-		return false, fmt.Errorf("the url was not fetched, %v", err)
+		return nil, err
 	}
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return false, fmt.Errorf("there was an issue reading the response %v", err)
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		matches := regexp.MustCompile(`(https?://[^\s]+)\s+([^\r\n]+)`).FindStringSubmatch(line)
+		if len(matches) == 3 {
+			c.url = matches[2]
+			c.keyword = matches[1]
+			inputData[c.keyword] = c.url
+		}
+
 	}
-	sr := string(b)
-	return strings.Contains(sr, keyword), nil
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return inputData, nil
 }
 
-func (c *Checker) PrintInformation(ctx context.Context) {
-
-	matched, err := Fetch(c.url, c.keyword)
-	if err != nil {
-		fmt.Fprintf(c.Output, "There was an issue fetching the url %s \n", err)
-	}
-	if !matched {
-		fmt.Fprintf(c.Output, "[%s]: No additional information about %s is available on the page %s \n", color.RedString("CHECKED-NO INFO"), c.keyword, c.url)
-
-	} else {
-		fmt.Fprintf(c.Output, "[%s]: There is information about %s. on the page %s\n", color.GreenString("CHECKED"), c.keyword, c.url)
-	}
-}
-
-// Start a list of urls.
+// StartList starts a list of urls and keywords that the user types in their terminal.
+// The user needs to type exit when they are done typing their list.
 func (c *Checker) StartList() (string, error) {
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -84,31 +83,34 @@ func (c *Checker) StartList() (string, error) {
 	return filePath, nil
 }
 
-// Read the file and create a map with urls and keywords.
-func (c *Checker) ReadFileSaveInput(filePath string) (map[string]string, error) {
-	inputData := make(map[string]string)
+// Fetch fetches the urls and verifies that a typed keyword is on a page.
+func Fetch(url string, keyword string) (matched bool, err error) {
 
-	file, err := os.Open(filePath)
+	resp, err := http.Get(string(url))
 	if err != nil {
-		return nil, err
+		return false, fmt.Errorf("the url was not fetched, %v", err)
 	}
-	defer file.Close()
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, fmt.Errorf("there was an issue reading the response %v", err)
+	}
+	sr := string(b)
+	return strings.Contains(sr, keyword), nil
+}
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		matches := regexp.MustCompile(`(https?://[^\s]+)\s+([^\r\n]+)`).FindStringSubmatch(line)
-		if len(matches) == 3 {
-			c.url = matches[2]
-			c.keyword = matches[1]
-			inputData[c.keyword] = c.url
-		}
+// PrintInformation prints if information was found on a page about a given keyword or not.
+func (c *Checker) PrintInformation(ctx context.Context) {
 
+	matched, err := Fetch(c.url, c.keyword)
+	if err != nil {
+		fmt.Fprintf(c.Output, "There was an issue fetching the url %s \n", err)
 	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	if !matched {
+		fmt.Fprintf(c.Output, "[%s]: No additional information about %s is available on the page %s \n", color.RedString("CHECKED-NO INFO"), c.keyword, c.url)
+
+	} else {
+		fmt.Fprintf(c.Output, "[%s]: There is information about %s. on the page %s\n", color.GreenString("CHECKED"), c.keyword, c.url)
 	}
-	return inputData, nil
 }
 
 // Run the program

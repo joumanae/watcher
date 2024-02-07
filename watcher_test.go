@@ -8,6 +8,17 @@ import (
 	"github.com/joumanae/watcher"
 )
 
+func TestStartList(t *testing.T) {
+
+}
+
+func FuzzReadAndSaveInput(f *testing.F) {
+	f.Fuzz(func(t *testing.T, input string) {
+		var c watcher.Checker
+		c.ReadFileSaveInput(input)
+	})
+}
+
 func TestFetch(t *testing.T) {
 	want := "Hello"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
