@@ -1,5 +1,10 @@
 # watcher
 
+//TODO: What if there was one function that made a list in a file, and the other function that checks each line of the file and feeds it to the map, and then the result is a loop that just runs the reading line by line function. 
+
+What if there is one function that looks up 
+Enhancement: is there a way to look scan the text on images? For instance, if the schedule of an activity is an image, can it be scanned? 
+
 ### When you submit your project for grading, it should have: 
 + [ ] A short, meaningful module name
 + [ ] A simple, logical package structure
