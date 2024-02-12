@@ -1,22 +1,30 @@
 package watcher_test
 
 import (
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/joumanae/watcher"
 )
 
-func TestStartList(t *testing.T) {
-
-}
-
-func FuzzReadAndSaveInput(f *testing.F) {
-	f.Fuzz(func(t *testing.T, input string) {
-		var c watcher.Checker
-		c.ReadFileSaveInput(input)
-	})
+func TestReadList(t *testing.T) {
+	// some function that creates a checker from a config file
+	// do you have the correct config
+	checker, err := watcher.NewChecker("testdata/testfile.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{
+		"https://innercitytennis.clubautomation.com/calendar/programs": "6U Rockets",
+		"https://www.americankaratestudio.com/stlouispark":             "KIDS GREEN & UP",
+	}
+	got := checker.Checks
+	if !maps.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
 }
 
 func TestFetch(t *testing.T) {

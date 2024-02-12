@@ -2,12 +2,10 @@ package watcher
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"os/signal"
 	"regexp"
 	"strings"
 
@@ -15,72 +13,38 @@ import (
 )
 
 type Checker struct {
-	url     string
-	keyword string
-	Output  io.Writer
+	Checks map[string]string
+	Output io.Writer
 }
 
 // NewChecker starts the program.
-func NewChecker(url string, keyword string) *Checker {
-	return &Checker{
-		url:     url,
-		keyword: keyword,
-		Output:  os.Stdout,
-	}
-}
-
-// ReadFlieSaveInput reads the file and creates a map with urls and keywords.
-func (c *Checker) ReadFileSaveInput(filePath string) (map[string]string, error) {
-	inputData := make(map[string]string)
-
-	file, err := os.Open(filePath)
+func NewChecker(path string) (*Checker, error) {
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	Checks := map[string]string{}
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		matches := regexp.MustCompile(`(https?://[^\s]+)\s+([^\r\n]+)`).FindStringSubmatch(line)
 		if len(matches) == 3 {
-			c.url = matches[2]
-			c.keyword = matches[1]
-			inputData[c.keyword] = c.url
+			url := strings.TrimSpace(matches[2])
+			keyword := strings.TrimSpace(matches[1])
+			Checks[keyword] = url
 		}
 
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	return inputData, nil
-}
-
-// StartList starts a list of urls and keywords that the user types in their terminal.
-// The user needs to type exit when they are done typing their list.
-func (c *Checker) StartList() (string, error) {
-
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	filePath := scanner.Text()
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return "no filepath", fmt.Errorf("there was an issue creating the file: %v", err)
-	}
-	defer file.Close()
-	for scanner.Scan() {
-		line := scanner.Text()
-		_, err = file.WriteString(line + "\n ")
-		if err != nil {
-			return "no filepath", fmt.Errorf("there was an issue writing the file: %v", err)
-		}
-		if line == "exit" {
-			break
-		}
-
-	}
-	return filePath, nil
+	return &Checker{
+		Checks: Checks,
+		Output: os.Stdout,
+	}, nil
 }
 
 // Fetch fetches the urls and verifies that a typed keyword is on a page.
@@ -98,53 +62,26 @@ func Fetch(url string, keyword string) (matched bool, err error) {
 	return strings.Contains(sr, keyword), nil
 }
 
-// PrintInformation prints if information was found on a page about a given keyword or not.
-func (c *Checker) PrintInformation(ctx context.Context) {
-
-	matched, err := Fetch(c.url, c.keyword)
-	if err != nil {
-		fmt.Fprintf(c.Output, "There was an issue fetching the url %s \n", err)
-	}
-	if !matched {
-		fmt.Fprintf(c.Output, "[%s]: No additional information about %s is available on the page %s \n", color.RedString("CHECKED-NO INFO"), c.keyword, c.url)
-
-	} else {
-		fmt.Fprintf(c.Output, "[%s]: There is information about %s. on the page %s\n", color.GreenString("CHECKED"), c.keyword, c.url)
-	}
-}
-
 // Run the program
 func Main() int {
-	var c Checker
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-
-	filepath, err := c.StartList()
+	c, err := NewChecker("Checks.txt")
 	if err != nil {
-		return 1
+		fmt.Printf("There was an issue with the file %v", err)
+		os.Exit(1)
 	}
 
-	MapedFile, err2 := c.ReadFileSaveInput(filepath)
-	if err2 != nil {
-		return 1
-	}
+	for url, keyword := range c.Checks {
+		matched, err := Fetch(url, keyword)
+		if err != nil {
+			fmt.Fprintf(c.Output, "There was an issue fetching the url %s \n", err)
+		}
+		if !matched {
+			fmt.Fprintf(c.Output, "[%s]: No additional information about %s is available on the page %s \n", color.RedString("CHECKED-NO INFO"), keyword, url)
 
-	resultCh := make(chan int)
-	for url, keyword := range MapedFile {
-		go func(u, k string) {
-			defer func() {
-				resultCh <- 0
-			}()
-			checker := NewChecker(u, k)
-			checker.PrintInformation(ctx)
-		}(url, keyword)
+		} else {
+			fmt.Fprintf(c.Output, "[%s]: There is information about %s. on the page %s\n", color.GreenString("CHECKED"), keyword, url)
+		}
 	}
-
-	// Wait for all goroutines to complete
-	for range MapedFile {
-		<-resultCh
-	}
-
 	return 0
 }
