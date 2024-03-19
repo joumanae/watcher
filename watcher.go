@@ -2,53 +2,201 @@ package watcher
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 )
 
+const (
+	Red   = "#ff0000"
+	Blue  = "#0000ff"
+	Green = "#00ff00 "
+)
+
 type Checker struct {
-	Checks map[string]string
 	Output io.Writer
+	Checks []Check
 }
 
-// NewChecker starts the program.
-func NewChecker(path string) (*Checker, error) {
+type Check struct {
+	url     string
+	keyword string
+	state   string
+}
+
+type ServerFile struct {
+	Srv *http.Server
+	C   Checker
+}
+
+func (s *ServerFile) StartServerFile(address, filename string) error {
+
+	c, err := NewChecker(filename)
+	if err != nil {
+		fmt.Printf("There was an issue with the file %v", err)
+		os.Exit(1)
+	}
+	s.C = *c
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", s.Handler)
+	s.Srv = &http.Server{
+		Addr:    address,
+		Handler: mux,
+	}
+
+	err = s.Srv.ListenAndServe()
+	if err != nil {
+		return fmt.Errorf("the server did not start %v", err)
+	}
+
+	return nil
+}
+
+func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request) {
+	// Set the content type to HTML
+	w.Header().Set("Content-Type", "text/html")
+
+	// Concatenate HTML content for all checks without line breaks
+	htmlContent := ""
+	for _, check := range s.C.Checks {
+		htmlContent += check.RecordResult()
+	}
+
+	// Write the concatenated HTML content to the response
+	_, err := w.Write([]byte(htmlContent))
+	if err != nil {
+
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *ServerFile) Shutdown() error {
+
+	ctx := context.Background()
+	err := s.Srv.Shutdown(ctx)
+	if err != nil {
+		return fmt.Errorf("the server did not shut down %v", err)
+	}
+	return nil
+}
+
+func (c *Checker) Check(path string) error {
+
+	var cs Check
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		fmt.Println("Please create a file with the correct name.")
+		return err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	Checks := map[string]string{}
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		matches := regexp.MustCompile(`(https?://[^\s]+)\s+([^\r\n]+)`).FindStringSubmatch(line)
 		if len(matches) == 3 {
-			url := strings.TrimSpace(matches[2])
-			keyword := strings.TrimSpace(matches[1])
-			Checks[keyword] = url
+			cs.keyword = strings.TrimSpace(matches[2])
+			cs.url = strings.TrimSpace(matches[1])
+			c.Checks = append(c.Checks, Check{
+				keyword: cs.keyword,
+				url:     cs.url,
+			})
 		}
-
+		for _, check := range c.Checks {
+			check.RecordResult()
+		}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return err
 	}
+
+	return nil
+}
+
+func (c *Check) RecordResult() string {
+	var s State
+	m, err := c.Match(c.url, c.keyword)
+	if err != nil {
+		s = StateError
+		c.state = s.HtmlString()
+		return fmt.Sprintf("<p><span style='color:red;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
+			c.state,
+			c.keyword,
+		)
+	}
+	if m {
+		s = StateFound
+		c.state = s.HtmlString()
+		return fmt.Sprintf("<p><span style='color:green;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
+			c.state,
+			c.keyword,
+		)
+	}
+	s = StateChecked
+	c.state = s.HtmlString()
+	return fmt.Sprintf("<p><span style='color:blue;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
+		c.state,
+		c.keyword,
+	)
+}
+
+func (s State) HtmlString() string {
+	msg := string(s)
+	switch s {
+	case StateError:
+		return msg
+	case StateChecked:
+		return msg
+	case StateFound:
+		return msg
+	default:
+		return msg
+	}
+}
+
+func (s State) String() string {
+	msg := string(s)
+	switch s {
+	case StateError:
+		return color.RedString(msg)
+	case StateChecked:
+		return color.BlueString(msg)
+	case StateFound:
+		return color.GreenString(msg)
+	default:
+		return msg
+	}
+}
+
+// NewChecker starts the program.
+func NewChecker(path string) (*Checker, error) {
+
 	return &Checker{
-		Checks: Checks,
+		Checks: []Check{},
 		Output: os.Stdout,
 	}, nil
 }
 
+type State string
+
+const (
+	StateError   State = "ERROR"
+	StateFound   State = "FOUND"
+	StateChecked State = "CHECKED"
+)
+
+// Check just needs to check itself
 // Fetch fetches the urls and verifies that a typed keyword is on a page.
-func Fetch(url string, keyword string) (matched bool, err error) {
+func (c *Check) Match(url string, keyword string) (matched bool, err error) {
 
 	resp, err := http.Get(string(url))
 	if err != nil {
@@ -64,24 +212,42 @@ func Fetch(url string, keyword string) (matched bool, err error) {
 
 // Run the program
 func Main() int {
+	s := ServerFile{}
+	start := time.Now()
 
-	c, err := NewChecker("Checks.txt")
+	// Check that the file exists
+	f := "checks.txt"
+	_, err := os.Stat(f)
+	if os.IsNotExist(err) {
+		fmt.Println("checks does not exit. The program will create it for you")
+		f, err := os.Create("checks.txt")
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Printf("File %v created", f)
+	} else {
+		fmt.Println("File exist, moving on to the next phase.")
+	}
+
+	// Add data to the file if data is missing
+	o, err := os.Open("checks.txt")
 	if err != nil {
-		fmt.Printf("There was an issue with the file %v", err)
+		fmt.Println("Error opening file:", err)
+		return 1
+	}
+	defer o.Close()
+	data := make([]byte, 50)
+	bytesRead, err := o.Read(data)
+	if err != nil {
+		fmt.Println("Error reading the file:", err)
 		os.Exit(1)
 	}
-
-	for url, keyword := range c.Checks {
-		matched, err := Fetch(url, keyword)
-		if err != nil {
-			fmt.Fprintf(c.Output, "There was an issue fetching the url %s \n", err)
-		}
-		if !matched {
-			fmt.Fprintf(c.Output, "[%s]: No additional information about %s is available on the page %s \n", color.RedString("CHECKED-NO INFO"), keyword, url)
-
-		} else {
-			fmt.Fprintf(c.Output, "[%s]: There is information about %s. on the page %s\n", color.GreenString("CHECKED"), keyword, url)
-		}
+	if bytesRead == 0 {
+		fmt.Println("Your file in empty, add data to your file")
 	}
+	//Start the server
+	s.StartServerFile(":8080", "checks.txt")
+
+	fmt.Println(time.Since(start))
 	return 0
 }
