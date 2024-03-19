@@ -60,16 +60,23 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request) {
 	// Set the content type to HTML
 	w.Header().Set("Content-Type", "text/html")
 
-	// Concatenate HTML content for all checks without line breaks
-	htmlContent := ""
-	for _, check := range s.C.Checks {
-		htmlContent += check.RecordResult()
-	}
+	// Start the HTML response
+	htmlContent := "<html><head><title>Checker Results</title></head><body>"
+	// Concatenate HTML content for all checks with proper HTML formatting
+	var c Checker
+	checks := c.Check("checks.txt")
 
-	// Write the concatenated HTML content to the response
+	for _, check := range checks {
+		htmlContent += check.RecordResult()
+		fmt.Println("here", htmlContent)
+
+	}
+	// End the HTML response
+	htmlContent += "</body></html>"
+
+	// Write the HTML content to the response
 	_, err := w.Write([]byte(htmlContent))
 	if err != nil {
-
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
 		return
 	}
@@ -85,46 +92,36 @@ func (s *ServerFile) Shutdown() error {
 	return nil
 }
 
-func (c *Checker) Check(path string) error {
-
-	var cs Check
+func (c *Checker) Check(path string) []Check {
 	file, err := os.Open(path)
 	if err != nil {
-		fmt.Println("Please create a file with the correct name.")
-		return err
-	}
-	defer file.Close()
-	data := make([]byte, 50)
-	_, err = file.Read(data)
-	if err != nil {
-		fmt.Println("File empty, add data:", err)
+		fmt.Println("The file could not open")
 		os.Exit(1)
 	}
+	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-
 	for scanner.Scan() {
-
 		line := scanner.Text()
 		matches := regexp.MustCompile(`(https?://[^\s]+)\s+([^\r\n]+)`).FindStringSubmatch(line)
 		if len(matches) == 3 {
-			cs.keyword = strings.TrimSpace(matches[2])
-			cs.url = strings.TrimSpace(matches[1])
+			keyword := strings.TrimSpace(matches[2])
+			url := strings.TrimSpace(matches[1])
 			c.Checks = append(c.Checks, Check{
-				keyword: cs.keyword,
-				url:     cs.url,
+				keyword: keyword,
+				url:     url,
 			})
 		}
-		for _, check := range c.Checks {
-			check.RecordResult()
-			fmt.Println(check.RecordResult())
-		}
 	}
+	var s ServerFile
+	s.C.Checks = c.Checks
+	fmt.Println("here", s.C.Checks)
 	if err := scanner.Err(); err != nil {
-		return err
+		fmt.Println("Errir scanning the slice")
+		os.Exit(0)
 	}
 
-	return nil
+	return s.C.Checks
 }
 
 func (c *Check) RecordResult() string {
@@ -220,11 +217,13 @@ func Main() int {
 	} else {
 		fmt.Println("File exist, moving on to the next phase.")
 	}
-	var c Checker
-	c.Check("checks.txt")
+	// Perform checks and populate the Checker instance
+	if err != nil {
+		fmt.Println("Error checking file:", err)
+		return 1 // Return error status
+	}
 
 	//Start the server
-
 	s.StartServerFile(":8080", "checks.txt")
 
 	return 0
