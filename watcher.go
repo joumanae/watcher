@@ -115,9 +115,9 @@ func (c *Checker) Check(path string) []Check {
 	}
 	var s ServerFile
 	s.C.Checks = c.Checks
-	fmt.Println("here", s.C.Checks)
+
 	if err := scanner.Err(); err != nil {
-		fmt.Println("Errir scanning the slice")
+		fmt.Println("Error scanning the slice")
 		os.Exit(0)
 	}
 
@@ -126,7 +126,7 @@ func (c *Checker) Check(path string) []Check {
 
 func (c *Check) RecordResult() string {
 	var s State
-	fmt.Println("In record result")
+
 	m, err := c.Match(c.url, c.keyword)
 	if err != nil {
 		s = StateError
@@ -187,7 +187,7 @@ const (
 // Check just needs to check itself
 // Fetch fetches the urls and verifies that a typed keyword is on a page.
 func (c *Check) Match(url string, keyword string) (matched bool, err error) {
-	fmt.Println("in Match")
+
 	resp, err := http.Get(string(url))
 	if err != nil {
 		return false, fmt.Errorf("the url was not fetched, %v", err)
