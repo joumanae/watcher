@@ -1,9 +1,6 @@
 # watcher
 
 
-// https://innercitytennis.clubautomation.com/calendar/programs 6U Rockets
-// https://www.americankaratestudio.com/stlouispark KIDS GREEN & UP 
-
 ### When you submit your project for grading, it should have: 
 + [ ] A short, meaningful module name
 + [ ] A simple, logical package structure

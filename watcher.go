@@ -9,9 +9,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
-
-	"github.com/fatih/color"
 )
 
 const (
@@ -97,10 +94,17 @@ func (c *Checker) Check(path string) error {
 		return err
 	}
 	defer file.Close()
+	data := make([]byte, 50)
+	_, err = file.Read(data)
+	if err != nil {
+		fmt.Println("File empty, add data:", err)
+		os.Exit(1)
+	}
 
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
+
 		line := scanner.Text()
 		matches := regexp.MustCompile(`(https?://[^\s]+)\s+([^\r\n]+)`).FindStringSubmatch(line)
 		if len(matches) == 3 {
@@ -113,6 +117,7 @@ func (c *Checker) Check(path string) error {
 		}
 		for _, check := range c.Checks {
 			check.RecordResult()
+			fmt.Println(check.RecordResult())
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -124,6 +129,7 @@ func (c *Checker) Check(path string) error {
 
 func (c *Check) RecordResult() string {
 	var s State
+	fmt.Println("In record result")
 	m, err := c.Match(c.url, c.keyword)
 	if err != nil {
 		s = StateError
@@ -150,28 +156,15 @@ func (c *Check) RecordResult() string {
 }
 
 func (s State) HtmlString() string {
-	msg := string(s)
-	switch s {
-	case StateError:
-		return msg
-	case StateChecked:
-		return msg
-	case StateFound:
-		return msg
-	default:
-		return msg
-	}
-}
 
-func (s State) String() string {
 	msg := string(s)
 	switch s {
 	case StateError:
-		return color.RedString(msg)
+		return msg
 	case StateChecked:
-		return color.BlueString(msg)
+		return msg
 	case StateFound:
-		return color.GreenString(msg)
+		return msg
 	default:
 		return msg
 	}
@@ -197,7 +190,7 @@ const (
 // Check just needs to check itself
 // Fetch fetches the urls and verifies that a typed keyword is on a page.
 func (c *Check) Match(url string, keyword string) (matched bool, err error) {
-
+	fmt.Println("in Match")
 	resp, err := http.Get(string(url))
 	if err != nil {
 		return false, fmt.Errorf("the url was not fetched, %v", err)
@@ -213,41 +206,26 @@ func (c *Check) Match(url string, keyword string) (matched bool, err error) {
 // Run the program
 func Main() int {
 	s := ServerFile{}
-	start := time.Now()
-
 	// Check that the file exists
 	f := "checks.txt"
 	_, err := os.Stat(f)
 	if os.IsNotExist(err) {
-		fmt.Println("checks does not exit. The program will create it for you")
-		f, err := os.Create("checks.txt")
+		fmt.Println("checks does not exit. The program will create it for you. Please add data to your file.")
+		_, err := os.Create("checks.txt")
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("File %v created", f)
+		fmt.Print("File created")
+		os.Exit(1)
 	} else {
 		fmt.Println("File exist, moving on to the next phase.")
 	}
+	var c Checker
+	c.Check("checks.txt")
 
-	// Add data to the file if data is missing
-	o, err := os.Open("checks.txt")
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return 1
-	}
-	defer o.Close()
-	data := make([]byte, 50)
-	bytesRead, err := o.Read(data)
-	if err != nil {
-		fmt.Println("Error reading the file:", err)
-		os.Exit(1)
-	}
-	if bytesRead == 0 {
-		fmt.Println("Your file in empty, add data to your file")
-	}
 	//Start the server
+
 	s.StartServerFile(":8080", "checks.txt")
 
-	fmt.Println(time.Since(start))
 	return 0
 }
