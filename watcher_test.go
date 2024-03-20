@@ -1,6 +1,7 @@
 package watcher_test
 
 import (
+	"cmp"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,14 +29,14 @@ func TestMatch(t *testing.T) {
 func TestStartServerFile(t *testing.T) {
 	s := watcher.ServerFile{}
 	go func() {
-		address := ":8081"
+		address := ":8080"
 		filename := "Checks.txt"
 		err := s.StartServerFile(address, filename)
 		if err != nil {
 			panic(err)
 		}
 	}()
-	r, err := http.Get("http://127.0.0.1:8081")
+	r, err := http.Get("http://127.0.0.1:8080")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +75,10 @@ func TestThatHandlerServesHTML(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	var checker watcher.Checker
-	checker.Check("Checks.txt")
-
+	var c watcher.Checker
+	want := 2
+	got := len(c.Check("checkstest.txt"))
+	if cmp.Compare(want, got) != 0 {
+		t.Errorf("Incorrect length. Want %v, got %v,", want, got)
+	}
 }

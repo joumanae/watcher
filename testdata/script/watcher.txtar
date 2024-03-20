@@ -1,2 +1,4 @@
+! exec watcher 
+stdout 'checks does not'
 exec watcher 
-stdout
+stdout 'File exist'

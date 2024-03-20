@@ -68,7 +68,6 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request) {
 
 	for _, check := range checks {
 		htmlContent += check.RecordResult()
-		fmt.Println("here", htmlContent)
 
 	}
 	// End the HTML response
