@@ -2,7 +2,6 @@ package watcher
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -79,16 +78,6 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
 		return
 	}
-}
-
-func (s *ServerFile) Shutdown() error {
-
-	ctx := context.Background()
-	err := s.Srv.Shutdown(ctx)
-	if err != nil {
-		return fmt.Errorf("the server did not shut down %v", err)
-	}
-	return nil
 }
 
 func (c *Checker) Check(path string) []Check {
