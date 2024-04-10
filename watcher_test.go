@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -90,4 +91,10 @@ func TestScript(t *testing.T) {
 	testscript.Run(t, testscript.Params{
 		Dir: "testdata/script",
 	})
+}
+
+func TestMain(m *testing.M) {
+	os.Exit(testscript.RunMain(m, map[string]func() int{
+		"watcher": watcher.Main,
+	}))
 }

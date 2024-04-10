@@ -39,6 +39,7 @@ func (s *ServerFile) StartServerFile(address, filename string) error {
 		fmt.Printf("There was an issue with the file %v", err)
 		os.Exit(1)
 	}
+
 	s.C = *c
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.Handler)
@@ -99,10 +100,13 @@ func (c *Checker) Check(path string) []Check {
 				keyword: keyword,
 				url:     url,
 			})
+			fmt.Println(keyword, url)
 		}
+
 	}
 	var s ServerFile
 	s.C.Checks = c.Checks
+	fmt.Println("s.c.Checks", s.C.Checks)
 
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error scanning the slice")
@@ -116,7 +120,9 @@ func (c *Check) RecordResult() string {
 	var s State
 
 	m, err := c.Match(c.url, c.keyword)
+
 	if err != nil {
+		fmt.Println("error", err)
 		s = StateError
 		c.state = s.HtmlString()
 		return fmt.Sprintf("<p><span style='color:red;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
@@ -124,6 +130,7 @@ func (c *Check) RecordResult() string {
 			c.keyword,
 		)
 	}
+
 	if m {
 		s = StateFound
 		c.state = s.HtmlString()
@@ -132,6 +139,7 @@ func (c *Check) RecordResult() string {
 			c.keyword,
 		)
 	}
+
 	s = StateChecked
 	c.state = s.HtmlString()
 	return fmt.Sprintf("<p><span style='color:blue;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
@@ -191,6 +199,7 @@ func (c *Check) Match(url string, keyword string) (matched bool, err error) {
 // Run the program
 func Main() int {
 	s := ServerFile{}
+
 	// Check that the file exists
 	f := "checks.txt"
 	_, err := os.Stat(f)
@@ -212,7 +221,10 @@ func Main() int {
 	}
 
 	//Start the server
-	s.StartServerFile(":8080", "checks.txt")
-
+	err = s.StartServerFile(":8080", "checks.txt")
+	if err != nil {
+		fmt.Printf("The server did not start %v", err)
+		os.Exit(1)
+	}
 	return 0
 }
