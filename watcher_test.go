@@ -87,14 +87,14 @@ func TestCheck(t *testing.T) {
 	}
 }
 
-func TestScript(t *testing.T) {
-	testscript.Run(t, testscript.Params{
-		Dir: "testdata/script",
-	})
-}
-
 func TestMain(m *testing.M) {
 	os.Exit(testscript.RunMain(m, map[string]func() int{
 		"watcher": watcher.Main,
 	}))
+}
+
+func TestScript(t *testing.T) {
+	testscript.Run(t, testscript.Params{
+		Dir: "testdata/script",
+	})
 }

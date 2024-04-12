@@ -100,13 +100,11 @@ func (c *Checker) Check(path string) []Check {
 				keyword: keyword,
 				url:     url,
 			})
-			fmt.Println(keyword, url)
 		}
 
 	}
 	var s ServerFile
 	s.C.Checks = c.Checks
-	fmt.Println("s.c.Checks", s.C.Checks)
 
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error scanning the slice")
@@ -122,7 +120,7 @@ func (c *Check) RecordResult() string {
 	m, err := c.Match(c.url, c.keyword)
 
 	if err != nil {
-		fmt.Println("error", err)
+
 		s = StateError
 		c.state = s.HtmlString()
 		return fmt.Sprintf("<p><span style='color:red;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
