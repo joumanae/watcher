@@ -52,7 +52,10 @@ func (s *ServerFile) StartServerFile(address, filename string) error {
 
 	s.C = *c
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", s.Handler)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		s.Handler(w, r, filename)
+	})
+
 	s.Srv = &http.Server{
 		Addr:    address,
 		Handler: mux,
@@ -66,7 +69,7 @@ func (s *ServerFile) StartServerFile(address, filename string) error {
 	return nil
 }
 
-func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request) {
+func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename string) {
 
 	// Set the content type to HTML
 	w.Header().Set("Content-Type", "text/html")
@@ -75,7 +78,7 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request) {
 	htmlContent := "<html><head><title>Checker Results</title></head><body>"
 	// Concatenate HTML content for all checks with proper HTML formatting
 	var c Checker
-	checks := c.Check("checks")
+	checks := c.Check(filename)
 
 	for _, check := range checks {
 		htmlContent += check.RecordResult()
