@@ -1,0 +1,4 @@
+mkdir watchertest 
+chmod  000 watchertest
+! exec watcher watchertest/twtestfile.txt 
+stdout 'Error checking file'

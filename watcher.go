@@ -2,6 +2,7 @@ package watcher
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -33,11 +34,20 @@ type ServerFile struct {
 }
 
 func (s *ServerFile) StartServerFile(address, filename string) error {
-
+	fmt.Printf("serving the file %v\n", filename)
 	c, err := NewChecker(filename)
 	if err != nil {
 		fmt.Printf("There was an issue with the file %v", err)
 		os.Exit(1)
+	}
+
+	fileInfo, err := os.Stat(filename)
+	if err != nil {
+		return errors.New("issues with file info")
+	}
+
+	if fileInfo.Size() == 0 {
+		return errors.New("there were no checks found")
 	}
 
 	s.C = *c
@@ -57,6 +67,7 @@ func (s *ServerFile) StartServerFile(address, filename string) error {
 }
 
 func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request) {
+
 	// Set the content type to HTML
 	w.Header().Set("Content-Type", "text/html")
 
@@ -64,7 +75,7 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request) {
 	htmlContent := "<html><head><title>Checker Results</title></head><body>"
 	// Concatenate HTML content for all checks with proper HTML formatting
 	var c Checker
-	checks := c.Check("checks.txt")
+	checks := c.Check("checks")
 
 	for _, check := range checks {
 		htmlContent += check.RecordResult()
@@ -77,8 +88,9 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte(htmlContent))
 	if err != nil {
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
-		return
+
 	}
+
 }
 
 func (c *Checker) Check(path string) []Check {
@@ -197,29 +209,32 @@ func (c *Check) Match(url string, keyword string) (matched bool, err error) {
 // Run the program
 func Main() int {
 	s := ServerFile{}
-
-	// Check that the file exists
 	f := "checks.txt"
+	// Check that the file exists
+	if len(os.Args) > 1 {
+		f = os.Args[1]
+	}
+
 	_, err := os.Stat(f)
 	if os.IsNotExist(err) {
-		fmt.Println("checks does not exit. The program will create it for you. Please add data to your file.")
-		_, err := os.Create("checks.txt")
+		fmt.Println("checks does not exit. The program will create it for you.")
+		_, err := os.Create(f)
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Print("File created")
-		os.Exit(1)
+		fmt.Printf("File created %v. Please add data.", f)
+		os.Exit(0)
 	} else {
 		fmt.Println("File exist, moving on to the next phase.")
 	}
-	// Perform checks and populate the Checker instance
+
 	if err != nil {
 		fmt.Println("Error checking file:", err)
 		return 1 // Return error status
 	}
 
 	//Start the server
-	err = s.StartServerFile(":8080", "checks.txt")
+	err = s.StartServerFile(":8080", f)
 	if err != nil {
 		fmt.Printf("The server did not start %v", err)
 		os.Exit(1)

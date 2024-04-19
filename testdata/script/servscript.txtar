@@ -1,0 +1,4 @@
+! exec watcher random.txt  
+stdout 'serving the file random.txt'
+stdout 'there were no checks found'
+-- random.txt --
