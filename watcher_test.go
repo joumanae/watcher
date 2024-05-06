@@ -2,6 +2,7 @@ package watcher_test
 
 import (
 	"cmp"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -85,6 +86,95 @@ func TestCheck(t *testing.T) {
 	if cmp.Compare(want, got) != 0 {
 		t.Errorf("Incorrect length. Want %v, got %v,", want, got)
 	}
+}
+
+func TestRecordResult(t *testing.T) {
+	t.Parallel()
+	var c watcher.Check
+	var s watcher.State
+	_, err := c.Match("https://wizardzines.com/", "rr")
+
+	record := c.RecordResult()
+	if err != nil && s != "StateError" {
+		t.Errorf("the wrong error was given %v", err)
+	}
+	if record != "<p><span style='color:red;'>[ERROR] </span> For keyword <span style='color:black;'></span></p>" {
+		t.Errorf("there was an unexpected record %v", record)
+	}
+
+}
+
+func TestChecker_Check_ErrorScanningSlice(t *testing.T) {
+	// Create a temporary file with contents that will cause an error during scanning
+	tempFile, err := os.CreateTemp("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Write invalid content to the temporary file
+	_, err = tempFile.WriteString("invalid content")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tempFile.Close()
+	// Remove the temporary file when the test finishes
+	defer os.Remove(tempFile.Name())
+
+	// Create a Checker instance
+	c := watcher.Checker{}
+
+	// Call the Check method with the path to the temporary file
+	result := c.Check(tempFile.Name())
+
+	// Verify that the result is empty
+	if len(result) != 0 {
+		t.Errorf("Expected empty result, got: %v", result)
+	}
+}
+
+func TestStartServerFile_FileNotFoundError(t *testing.T) {
+	s := &watcher.ServerFile{}
+
+	err := s.StartServerFile("localhost:8080", "/path/to/nonexistent/file")
+
+	if err == nil || err.Error() != "issues with file info" {
+		t.Errorf("Expected error: 'issues with file info', got: %v", err)
+	}
+}
+
+func TestStartServerFile_EmptyFileError(t *testing.T) {
+	// Create a temporary empty file for testing
+	tempFile := createTempFile(t, "")
+	defer os.Remove(tempFile)
+
+	s := &watcher.ServerFile{}
+
+	err := s.StartServerFile("localhost:8080", tempFile)
+
+	if err == nil || err.Error() != "there were no file found" {
+		t.Errorf("Expected error: 'there were no file found', got: %v", err)
+	}
+}
+
+// Helper function to create a temporary file for testing
+func createTempFile(t *testing.T, content string) string {
+	tempFile, err := os.CreateTemp("", "example")
+	if err != nil {
+		t.Fatalf("failed to create temporary file: %v", err)
+	}
+	defer tempFile.Close()
+
+	_, err = tempFile.WriteString(content)
+	if err != nil {
+		t.Fatalf("failed to write to temporary file: %v", err)
+	}
+
+	return tempFile.Name()
+}
+
+func ExampleCheck() {
+	var c watcher.Checker
+	fmt.Println(c.Check("checkstest.txt"))
+	// Output ["https://wizardzines.com/", "How DNS Works!", "https://betterexplained.com/cheatsheet/", "Intuitive Learning"]
 }
 
 func TestMain(m *testing.M) {
