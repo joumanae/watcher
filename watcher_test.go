@@ -82,7 +82,15 @@ func TestCheck(t *testing.T) {
 	t.Parallel()
 	var c watcher.Checker
 	want := 2
-	got := len(c.Check("checkstest.txt"))
+	_, err := c.Check("inexistantfile.txt")
+	if err == nil {
+		t.Error("expected the error that the file does not exist.")
+	}
+	checks, err := c.Check("checkstest.txt")
+	if err != nil {
+		t.Fatalf("unexpected error, %v", err)
+	}
+	got := len(checks)
 	if cmp.Compare(want, got) != 0 {
 		t.Errorf("Incorrect length. Want %v, got %v,", want, got)
 	}
@@ -123,7 +131,10 @@ func TestChecker_Check_ErrorScanningSlice(t *testing.T) {
 	c := watcher.Checker{}
 
 	// Call the Check method with the path to the temporary file
-	result := c.Check(tempFile.Name())
+	result, err := c.Check(tempFile.Name())
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
 
 	// Verify that the result is empty
 	if len(result) != 0 {
@@ -150,8 +161,8 @@ func TestStartServerFile_EmptyFileError(t *testing.T) {
 
 	err := s.StartServerFile("localhost:8080", tempFile)
 
-	if err == nil || err.Error() != "there were no file found" {
-		t.Errorf("Expected error: 'there were no file found', got: %v", err)
+	if err == nil || err.Error() != "there were no files found" {
+		t.Errorf("Expected the error there were no files found, got %v", err)
 	}
 }
 

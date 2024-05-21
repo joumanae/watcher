@@ -37,8 +37,7 @@ func (s *ServerFile) StartServerFile(address, filename string) error {
 	fmt.Printf("serving the file %v\n", filename)
 	c, err := NewChecker(filename)
 	if err != nil {
-		fmt.Printf("There was an issue with the file %v", err)
-		os.Exit(1)
+		return fmt.Errorf("expected lists of tasks got %v", err)
 	}
 
 	fileInfo, err := os.Stat(filename)
@@ -47,7 +46,7 @@ func (s *ServerFile) StartServerFile(address, filename string) error {
 	}
 
 	if fileInfo.Size() == 0 {
-		return errors.New("there were no checks found")
+		return errors.New("there were no files found")
 	}
 
 	s.C = *c
@@ -69,7 +68,7 @@ func (s *ServerFile) StartServerFile(address, filename string) error {
 	return nil
 }
 
-func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename string) {
+func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename string) error {
 
 	// Set the content type to HTML
 	w.Header().Set("Content-Type", "text/html")
@@ -78,7 +77,10 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename st
 	htmlContent := "<html><head><title>Checker Results</title></head><body>"
 	// Concatenate HTML content for all checks with proper HTML formatting
 	var c Checker
-	checks := c.Check(filename)
+	checks, err := c.Check(filename)
+	if err != nil {
+		return fmt.Errorf("an error occured: %v", err)
+	}
 
 	for _, check := range checks {
 		htmlContent += check.RecordResult()
@@ -88,19 +90,18 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename st
 	htmlContent += "</body></html>"
 
 	// Write the HTML content to the response
-	_, err := w.Write([]byte(htmlContent))
+	_, err = w.Write([]byte(htmlContent))
 	if err != nil {
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
 
 	}
-
+	return nil
 }
 
-func (c *Checker) Check(path string) []Check {
+func (c *Checker) Check(path string) ([]Check, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		fmt.Println("The file could not open")
-		os.Exit(1)
+		return nil, errors.New("the file could not open")
 	}
 	defer file.Close()
 
@@ -122,11 +123,10 @@ func (c *Checker) Check(path string) []Check {
 	s.C.Checks = c.Checks
 
 	if err := scanner.Err(); err != nil {
-		fmt.Println("Error scanning the slice")
-		os.Exit(0)
+		return nil, err
 	}
 
-	return s.C.Checks
+	return s.C.Checks, nil
 }
 
 func (c *Check) RecordResult() string {
