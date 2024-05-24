@@ -25,7 +25,6 @@ type Checker struct {
 type Check struct {
 	url     string
 	keyword string
-	state   string
 }
 
 type ServerFile struct {
@@ -35,10 +34,7 @@ type ServerFile struct {
 
 func (s *ServerFile) StartServerFile(address, filename string) error {
 	fmt.Printf("serving the file %v\n", filename)
-	c, err := NewChecker(filename)
-	if err != nil {
-		return fmt.Errorf("expected lists of tasks got %v", err)
-	}
+	c := NewChecker(filename)
 
 	fileInfo, err := os.Stat(filename)
 	if err != nil {
@@ -130,68 +126,36 @@ func (c *Checker) Check(path string) ([]Check, error) {
 }
 
 func (c *Check) RecordResult() string {
-	var s State
 
-	m, err := c.Match(c.url, c.keyword)
-
-	if err != nil {
-
-		s = StateError
-		c.state = s.HtmlString()
-		return fmt.Sprintf("<p><span style='color:red;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
-			c.state,
-			c.keyword,
-		)
+	ok, err := c.Match(c.url, c.keyword)
+	var color, state string
+	switch {
+	case err != nil:
+		color = "red"
+		state = "ERROR"
+	case ok:
+		color = "green"
+		state = "FOUND"
+	default:
+		color = "blue"
+		state = "CHECKED"
 	}
 
-	if m {
-		s = StateFound
-		c.state = s.HtmlString()
-		return fmt.Sprintf("<p><span style='color:green;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
-			c.state,
-			c.keyword,
-		)
-	}
-
-	s = StateChecked
-	c.state = s.HtmlString()
-	return fmt.Sprintf("<p><span style='color:blue;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
-		c.state,
+	return fmt.Sprintf("<p><span style='color:%s;'>[%s] </span> For keyword <span style='color:black;'>%s</span></p>",
+		color,
+		state,
 		c.keyword,
 	)
 }
 
-func (s State) HtmlString() string {
-
-	msg := string(s)
-	switch s {
-	case StateError:
-		return msg
-	case StateChecked:
-		return msg
-	case StateFound:
-		return msg
-	default:
-		return msg
-	}
-}
-
 // NewChecker starts the program.
-func NewChecker(path string) (*Checker, error) {
+func NewChecker(path string) *Checker {
 
 	return &Checker{
 		Checks: []Check{},
 		Output: os.Stdout,
-	}, nil
+	}
 }
-
-type State string
-
-const (
-	StateError   State = "ERROR"
-	StateFound   State = "FOUND"
-	StateChecked State = "CHECKED"
-)
 
 // Check just needs to check itself
 // Fetch fetches the urls and verifies that a typed keyword is on a page.
@@ -213,7 +177,7 @@ func (c *Check) Match(url string, keyword string) (matched bool, err error) {
 func Main() int {
 	s := ServerFile{}
 	f := "checks.txt"
-	// Check that the file exists
+
 	if len(os.Args) > 1 {
 		f = os.Args[1]
 	}
@@ -223,7 +187,7 @@ func Main() int {
 		fmt.Println("checks does not exit. The program will create it for you.")
 		_, err := os.Create(f)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("There was an issue creating the file %v", err)
 		}
 		fmt.Printf("File created %v. Please add data.", f)
 		os.Exit(0)
@@ -233,10 +197,9 @@ func Main() int {
 
 	if err != nil {
 		fmt.Println("Error checking file:", err)
-		return 1 // Return error status
+		return 1
 	}
 
-	//Start the server
 	err = s.StartServerFile(":8080", f)
 	if err != nil {
 		fmt.Printf("The server did not start %v", err)

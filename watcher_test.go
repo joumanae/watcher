@@ -2,6 +2,7 @@ package watcher_test
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -20,14 +21,21 @@ func TestMatch(t *testing.T) {
 
 		w.Write([]byte(want))
 	}))
+
 	defer server.Close()
 	var c watcher.Check
 	s, err := c.Match(server.URL, want)
 	if err != nil {
 		t.Error("the server failed")
 	}
+	if err != nil {
+		t.Error("there was an issue reading the response")
+	}
 	if s != true {
 		t.Fatalf("the wrong text was fetched, here is the text that was fetched %v", s)
+	}
+	if !s {
+		t.Fatalf("expected true, got false; the keyword was not found in the response.")
 	}
 }
 
@@ -70,7 +78,6 @@ func TestThatHandlerServesHTML(t *testing.T) {
 		}
 	}()
 	r := helperGet("8081")
-
 	expectedContentType := "text/html"
 	if contentType := r.Header.Get("content-type"); contentType != expectedContentType {
 		t.Errorf("handler returned wrong content type: got %v want %v",
@@ -99,12 +106,12 @@ func TestCheck(t *testing.T) {
 func TestRecordResult(t *testing.T) {
 	t.Parallel()
 	var c watcher.Check
-	var s watcher.State
+
 	_, err := c.Match("https://wizardzines.com/", "rr")
 
 	record := c.RecordResult()
-	if err != nil && s != "StateError" {
-		t.Errorf("the wrong error was given %v", err)
+	if err != nil {
+		t.Fatal(err)
 	}
 	if record != "<p><span style='color:red;'>[ERROR] </span> For keyword <span style='color:black;'></span></p>" {
 		t.Errorf("there was an unexpected record %v", record)
@@ -152,7 +159,23 @@ func TestStartServerFile_FileNotFoundError(t *testing.T) {
 	}
 }
 
-func TestStartServerFile_EmptyFileError(t *testing.T) {
+func TestStartServerFile_NewCheckerError(t *testing.T) {
+
+	// Define the error we expect NewChecker to return
+	// Need to start the server and make this work
+	expectedTasksError := errors.New("There were no files found")
+
+	NewChecker := func(filename string) (*watcher.Checker, error) {
+		return nil, expectedTasksError
+	}
+	c, err := NewChecker("emptytestfile.txt")
+
+	if err != expectedTasksError {
+		t.Errorf("expected error: %v, got: %v. checks length is %v", expectedTasksError, err, len(c.Checks))
+	}
+}
+
+func TestStartServerFile_NoFilesFound(t *testing.T) {
 	// Create a temporary empty file for testing
 	tempFile := createTempFile(t, "")
 	defer os.Remove(tempFile)
