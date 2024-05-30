@@ -85,6 +85,16 @@ func TestThatHandlerServesHTML(t *testing.T) {
 	}
 }
 
+func TestHandlerReturnsErrorOpeningFile(t *testing.T) {
+	t.Parallel()
+	s := watcher.ServerFile{}
+	w := httptest.NewRecorder()
+	err := s.Handler(w, nil, "doesnotexist.txt")
+	if err == nil {
+		t.Fatal("expected error from non existent file")
+	}
+}
+
 func TestCheck(t *testing.T) {
 	t.Parallel()
 	var c watcher.Checker

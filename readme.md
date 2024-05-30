@@ -26,7 +26,7 @@ go run cmd/watcher/main.go
 + [x] A README explaining briefly what the package/CLI does, how to import/install it, and a couple of examples of how to use it
 + [x] An open source licence (for example MIT)
 + [x] Passing tests with at least 90% coverage, including the CLI (86% coverage)
-+ [ ] Documentation comments for all your exported identifiers
++ [x] Documentation comments for all your exported identifiers
 + [x] Executable examples if appropriate
 + [ ] A listing on pkg.go.dev
 + [x] No commented-out code

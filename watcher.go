@@ -17,21 +17,25 @@ const (
 	Green = "#00ff00 "
 )
 
+// Checker holds the checks
 type Checker struct {
 	Output io.Writer
 	Checks []Check
 }
 
+// Check holds the url and keyword
 type Check struct {
 	url     string
 	keyword string
 }
 
+// ServerFile holds the server
 type ServerFile struct {
 	Srv *http.Server
 	C   Checker
 }
 
+// StartServerFile starts the server and returns an error if there is an issue.
 func (s *ServerFile) StartServerFile(address, filename string) error {
 	fmt.Printf("serving the file %v\n", filename)
 	c := NewChecker(filename)
@@ -64,6 +68,7 @@ func (s *ServerFile) StartServerFile(address, filename string) error {
 	return nil
 }
 
+// Handler serves the HTML response
 func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename string) error {
 
 	// Set the content type to HTML
@@ -94,6 +99,7 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename st
 	return nil
 }
 
+// Check checks the file for urls and keywords and returns a slice of checked urls and keywords.
 func (c *Checker) Check(path string) ([]Check, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -125,6 +131,7 @@ func (c *Checker) Check(path string) ([]Check, error) {
 	return s.C.Checks, nil
 }
 
+// RecordResult records the check result and formats it.
 func (c *Check) RecordResult() string {
 
 	ok, err := c.Match(c.url, c.keyword)
@@ -157,8 +164,7 @@ func NewChecker(path string) *Checker {
 	}
 }
 
-// Check just needs to check itself
-// Fetch fetches the urls and verifies that a typed keyword is on a page.
+// Match fetches the urls and verifies that a typed keyword is on a page returning a boolean.
 func (c *Check) Match(url string, keyword string) (matched bool, err error) {
 
 	resp, err := http.Get(string(url))
