@@ -19,17 +19,3 @@ To run the package, write the following
 go run cmd/watcher/main.go 
 
 ```
-
-### When you submit your project for grading, it should have: 
-+ [x] A short, meaningful module name
-+ [x] A simple, logical package structure
-+ [x] A README explaining briefly what the package/CLI does, how to import/install it, and a couple of examples of how to use it
-+ [x] An open source licence (for example MIT)
-+ [x] Passing tests with at least 90% coverage, including the CLI (86% coverage)
-+ [x] Documentation comments for all your exported identifiers
-+ [x] Executable examples if appropriate
-+ [ ] A listing on pkg.go.dev
-+ [x] No commented-out code
-+ [x] No unchecked errors
-+ [x] No 'staticcheck' warnings
-+ [x] A Go-compatible release tag (for example v0.1.0)
