@@ -2,6 +2,18 @@
 
 The watcher is a package that allows you to check if a keyword appears on a specific webpage. This watcher was written with caregivers in mind. When grownups are trying to keep up with sign ups, they can use this tool to check various pages without needing to look up every single page. 
 
+# How to import this package 
+
+```
+import "github.com/joumanae/watcher"
+```
+
+Or use `go install` through the CLI: 
+
+```
+go install github.com/joumanae/watcher/cmd/watcher@latest
+```
+
 
 # How to use this package 
 

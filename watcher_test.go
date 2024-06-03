@@ -109,7 +109,7 @@ func TestCheck(t *testing.T) {
 	}
 	got := len(checks)
 	if cmp.Compare(want, got) != 0 {
-		t.Errorf("Incorrect length. Want %v, got %v,", want, got)
+		t.Errorf("Incorrect length. Want %v, got %v,%v", want, got, checks)
 	}
 }
 

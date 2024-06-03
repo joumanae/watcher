@@ -37,7 +37,7 @@ type ServerFile struct {
 
 // StartServerFile starts the server and returns an error if there is an issue.
 func (s *ServerFile) StartServerFile(address, filename string) error {
-	fmt.Printf("serving the file %v\n", filename)
+
 	c := NewChecker(filename)
 
 	fileInfo, err := os.Stat(filename)
@@ -64,14 +64,13 @@ func (s *ServerFile) StartServerFile(address, filename string) error {
 	if err != nil {
 		return fmt.Errorf("the server did not start %v", err)
 	}
-
+	fmt.Fprintf(s.C.Output, "Starting server on %s\n", address)
 	return nil
 }
 
 // Handler serves the HTML response
 func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename string) error {
 
-	// Set the content type to HTML
 	w.Header().Set("Content-Type", "text/html")
 
 	// Start the HTML response
@@ -101,12 +100,12 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename st
 
 // Check checks the file for urls and keywords and returns a slice of checked urls and keywords.
 func (c *Checker) Check(path string) ([]Check, error) {
+
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, errors.New("the file could not open")
 	}
 	defer file.Close()
-
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -119,7 +118,6 @@ func (c *Checker) Check(path string) ([]Check, error) {
 				url:     url,
 			})
 		}
-
 	}
 	var s ServerFile
 	s.C.Checks = c.Checks

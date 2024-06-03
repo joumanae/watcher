@@ -1,4 +1,3 @@
 ! exec watcher random.txt  
-stdout 'serving the file random.txt'
-stdout 'there were no files found'
+stdout 'The server'
 -- random.txt --
