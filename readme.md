@@ -1,6 +1,6 @@
 # watcher
 
-The watcher is a package that allows you to check if a keyword appears on a specific webpage. This watcher was written with caregivers in mind. When grownups are trying to keep up with sign ups, they can use this tool to check various pages without needing to look up every single page. You will need to connect to your local server ([localhost8080](http://localhost:8080/)) to view the results of the search and match.
+The watcher is a package that allows you to check if a keyword appears on a specific webpage. This watcher was written with caregivers in mind. When grownups are trying to keep up with sign ups, they can use this tool to check various pages without needing to look up every single page. You will need to connect to your local server http://localhost:8080/ to view the results of the search and match.
 
 # How to import this package 
 
