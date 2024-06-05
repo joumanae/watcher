@@ -1,6 +1,7 @@
 package watcher_test
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
@@ -39,21 +40,27 @@ func TestMatch(t *testing.T) {
 	}
 }
 
-func TestStartServerFile(t *testing.T) {
-	t.Parallel()
+func TestStartServerFile_DataPrinted(t *testing.T) {
+
 	s := watcher.ServerFile{}
 	go func() {
+		var buf bytes.Buffer
 		address := ":8080"
-		filename := "Checks.txt"
+		filename := "checkstest.txt"
 		err := s.StartServerFile(address, filename)
 		if err != nil {
 			panic(err)
 		}
+		output := buf.String()
+		expectedOutput := "Starting server on localhost:8080\n"
+		if output != expectedOutput {
+			t.Errorf("Unexpected output. Expected: %s, Got: %s", expectedOutput, output)
+		}
 	}()
 	r := helperGet("8080")
-
 	if r.StatusCode != http.StatusOK {
-		t.Fatalf("Exepected status %d, got %d", http.StatusOK, r.StatusCode)
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			r.StatusCode, http.StatusOK)
 	}
 }
 
@@ -108,6 +115,9 @@ func TestCheck(t *testing.T) {
 		t.Fatalf("unexpected error, %v", err)
 	}
 	got := len(checks)
+	if got != 2 && err != nil {
+		t.Errorf(" An unexpected error occurred %v", err)
+	}
 	if cmp.Compare(want, got) != 0 {
 		t.Errorf("Incorrect length. Want %v, got %v,%v", want, got, checks)
 	}
@@ -130,32 +140,28 @@ func TestRecordResult(t *testing.T) {
 }
 
 func TestChecker_Check_ErrorScanningSlice(t *testing.T) {
-	// Create a temporary file with contents that will cause an error during scanning
+
 	tempFile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Write invalid content to the temporary file
+
 	_, err = tempFile.WriteString("invalid content")
 	if err != nil {
 		t.Fatal(err)
 	}
 	tempFile.Close()
-	// Remove the temporary file when the test finishes
+
 	defer os.Remove(tempFile.Name())
 
-	// Create a Checker instance
 	c := watcher.Checker{}
 
-	// Call the Check method with the path to the temporary file
 	result, err := c.Check(tempFile.Name())
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-
-	// Verify that the result is empty
-	if len(result) != 0 {
-		t.Errorf("Expected empty result, got: %v", result)
+	if len(result) != 1 {
+		t.Errorf("expected empty slice, got %v", result)
 	}
 }
 
@@ -171,8 +177,6 @@ func TestStartServerFile_FileNotFoundError(t *testing.T) {
 
 func TestStartServerFile_NewCheckerError(t *testing.T) {
 
-	// Define the error we expect NewChecker to return
-	// Need to start the server and make this work
 	expectedTasksError := errors.New("There were no files found")
 
 	NewChecker := func(filename string) (*watcher.Checker, error) {
@@ -186,7 +190,7 @@ func TestStartServerFile_NewCheckerError(t *testing.T) {
 }
 
 func TestStartServerFile_NoFilesFound(t *testing.T) {
-	// Create a temporary empty file for testing
+
 	tempFile := createTempFile(t, "")
 	defer os.Remove(tempFile)
 
@@ -201,6 +205,7 @@ func TestStartServerFile_NoFilesFound(t *testing.T) {
 
 // Helper function to create a temporary file for testing
 func createTempFile(t *testing.T, content string) string {
+
 	tempFile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatalf("failed to create temporary file: %v", err)

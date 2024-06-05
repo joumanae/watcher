@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 )
 
@@ -109,15 +108,16 @@ func (c *Checker) Check(path string) ([]Check, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		matches := regexp.MustCompile(`(https?://[^\s]+)\s+([^\r\n]+)`).FindStringSubmatch(line)
-		if len(matches) == 3 {
-			keyword := strings.TrimSpace(matches[2])
-			url := strings.TrimSpace(matches[1])
-			c.Checks = append(c.Checks, Check{
-				keyword: keyword,
-				url:     url,
-			})
+		matches := strings.SplitN(line, " ", 2)
+		if len(matches) != 2 {
+			continue
 		}
+		keyword := strings.TrimSpace(matches[1])
+		url := strings.TrimSpace(matches[0])
+		c.Checks = append(c.Checks, Check{
+			keyword: keyword,
+			url:     url,
+		})
 	}
 	var s ServerFile
 	s.C.Checks = c.Checks
