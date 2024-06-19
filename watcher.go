@@ -85,15 +85,9 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename st
 		htmlContent += check.RecordResult()
 
 	}
-	// End the HTML response
 	htmlContent += "</body></html>"
 
-	// Write the HTML content to the response
-	_, err = w.Write([]byte(htmlContent))
-	if err != nil {
-		http.Error(w, "Failed to write response", http.StatusInternalServerError)
-
-	}
+	fmt.Fprint(w, htmlContent)
 	return nil
 }
 
