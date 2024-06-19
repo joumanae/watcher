@@ -48,9 +48,11 @@ func TestStartServerFile_DataPrinted(t *testing.T) {
 		address := ":8080"
 		filename := "checkstest.txt"
 		err := s.StartServerFile(address, filename)
-		if err != nil {
-			panic(err)
+		expectedError := "The server did not start"
+		if err != nil && err.Error() != expectedError {
+			t.Errorf("Expected error: %s, got: %v", expectedError, err)
 		}
+
 		output := buf.String()
 		expectedOutput := "Starting server on localhost:8080\n"
 		if output != expectedOutput {
@@ -62,7 +64,10 @@ func TestStartServerFile_DataPrinted(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			r.StatusCode, http.StatusOK)
 	}
+
 }
+
+//     err := s.StartServerFile("localhost:8080", "filename")
 
 func helperGet(port string) *http.Response {
 	r, err := http.Get("http://127.0.0.1:" + port)
