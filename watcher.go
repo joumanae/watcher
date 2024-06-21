@@ -72,9 +72,8 @@ func (s *ServerFile) Handler(w http.ResponseWriter, r *http.Request, filename st
 
 	w.Header().Set("Content-Type", "text/html")
 
-	// Start the HTML response
 	htmlContent := "<html><head><title>Checker Results</title></head><body>"
-	// Concatenate HTML content for all checks with proper HTML formatting
+
 	var c Checker
 	checks, err := c.Check(filename)
 	if err != nil {
